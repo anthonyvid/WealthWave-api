@@ -1,7 +1,20 @@
 import express from "express";
+import jwt from "jsonwebtoken";
 
 import { getUserByEmail, createUser } from "../db/users";
-import { authentication, random } from "../utils";
+import { authentication, comparePasswords, random } from "../utils";
+
+export const authenticateRequest = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  try {
+    return res.status(200).end();
+  } catch (error) {
+    console.log(error);
+    return res.sendStatus(400);
+  }
+};
 
 export const login = async (req: express.Request, res: express.Response) => {
   try {
@@ -32,12 +45,13 @@ export const login = async (req: express.Request, res: express.Response) => {
     );
 
     await user.save();
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
 
     res.cookie("WEALTHWAVE-AUTH", user.authentication.sessionToken, {
       path: "/",
     });
 
-    return res.status(200).json(user).end();
+    return res.status(200).json({ user, token }).end();
   } catch (error) {
     console.log(error);
     return res.sendStatus(400);
@@ -46,9 +60,9 @@ export const login = async (req: express.Request, res: express.Response) => {
 
 export const register = async (req: express.Request, res: express.Response) => {
   try {
-    const { email, password, fname, lname } = req.body;
+    const { email, password, firstname, lastname } = req.body;
 
-    if (!email || !password || !fname || !lname) {
+    if (!email || !password || !firstname || !lastname) {
       return res.sendStatus(400);
     }
 
@@ -61,15 +75,27 @@ export const register = async (req: express.Request, res: express.Response) => {
     const salt = random();
     const user = await createUser({
       email,
-      fname,
-      lname,
+      fname: firstname,
+      lname: lastname,
       authentication: {
         salt,
         password: authentication(salt, password),
       },
     });
 
-    return res.status(200).json(user).end();
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+
+    return res.status(200).json({ user, token }).end();
+  } catch (error) {
+    console.log(error);
+    return res.sendStatus(400);
+  }
+};
+
+export const logout = async (req: express.Request, res: express.Response) => {
+  try {
+    res.clearCookie("WEALTHWAVE-AUTH", { path: "/" });
+    res.status(200).end();
   } catch (error) {
     console.log(error);
     return res.sendStatus(400);

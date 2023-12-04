@@ -7,12 +7,15 @@ import cors from "cors";
 
 import router from "./router";
 import mongoose from "mongoose";
+require("dotenv").config();
 
 const app = express();
 
 app.use(
   cors({
     credentials: true,
+    origin:
+      process.env.NODE_ENV === "development" ? "http://localhost:5173" : "",
   })
 );
 
